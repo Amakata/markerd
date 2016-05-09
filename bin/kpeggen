@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'rainbow/ext/string'
+require 'open3'
+require 'shellwords'
+
+def cmd_exec(cmd, args, option)
+  cmd_line = cmd + ' ' + args.map do |arg|
+    Shellwords.shellescape(arg)
+  end.join(' ')
+  puts cmd_line.color :cyan
+  stdout, stderr, status = Open3.capture3 cmd_line
+
+  puts stdout.color :green if option[:v] || status != 0
+  return unless status != 0
+  puts stderr.color :red
+  puts 'error!'.color :red
+  exit
+end
+
+cur_dir = Dir.getwd
+
+$LOAD_PATH.unshift "#{cur_dir}/lib"
+$LOAD_PATH.unshift File.dirname(__FILE__) + '/../lib'
+
+#FileUtils.rm "#{File.dirname(__FILE__)}/../lib/markerd/markerd.kpeg.rb", force: true
+
+#cmd_exec 'kpeg', ["#{File.dirname(__FILE__)}/../lib/markerd/markerd.kpeg"], {}
+
+require 'markerd/markerd.kpeg'
+require 'markerd/node'
+
+
+parser = Markerd::Parser.new('title { label: "aaaaa", size: "10" }')
+
+puts parser.result.inspect if parser.parse

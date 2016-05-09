@@ -1,0 +1,80 @@
+%% name = Markerd::Parser
+
+%% ast-location = ::Markerd
+
+%% document = ast DocumentNode(compiler, position, content)
+%% entity = ast EntityNode(compiler, position, content)
+%% entity_item = ast EntityItemNode(compiler, position, content)
+%% relationship = ast RelationshipNode(compiler, position, content)
+%% title = ast TitleNode(compiler, position, content)
+%% attribute = ast AttributeNode(compiler, position, name, value)
+
+
+%% {
+  # 抽象構文木のプロパティを追加
+  attr_reader :ast
+
+  # コンパイラから位置情報を取得するクラス
+  # posが現在の位置、lineが現在の行、colが現在の列
+  class Position
+    attr_accessor :pos, :line, :col
+    def initialize(compiler)
+      @pos = compiler.pos
+      @line = compiler.current_line
+      @col = compiler.current_column
+    end
+  end
+
+  # 現在の位置を取得するメソッド。ASTのノードを呼び出すときに第２引数で使う
+  def position
+    Position.new(self)
+  end
+}
+
+# ルールの開始
+root = Start
+
+# 最初に一文字があれば成功、なければエラーになるようにするために「&.」がある。
+# @astにDocのASTのノードを設定している。（これで全体にアクセスできる）
+Start = &. Doc:c { @ast = c  }
+
+# Doc は 0個以上のブロックからなり、そのブロックを束ねた物をDocumentNodeとして生成
+Doc =       Element+:c ~document(self, position, c)
+
+# Elementは、0個以上のBlankLineに続くブロック要素からなる。
+# 優先度が高いものほどマッチしやすいのでここでのブロックの順番は重要
+Element =
+            ( Title
+            )
+
+#Title = 'title' Sp (Newline Sp)* '{' TitleAttributes:c '}' BlankLine* ~title(self, position, c)
+
+Title = 'title' Sp '{' TitleAttributes:c '}' ~title(self, position, c)
+
+
+TitleAttributes = (TitleAttribute:c (',' TitleAttribute)*:cc) { cc.unshift c }
+
+TitleAttribute =  BlankLine*
+                ( Label
+                | Size
+                )
+
+Label =  Sp 'label:' Sp '"' 'a'*:value '"' Sp ~attribute(self, position, 'label', value)
+
+Size = Sp 'size:' Sp '"' Digits:value '"' Sp ~attribute(self, position, 'size', value)
+
+Digits = <Digit+> { text }
+
+Entity = !.
+
+Relationship = !.
+
+BlankLine =     Sp Newline
+
+Sp =            Spacechar*
+Spnl =          Sp (Newline Sp)?
+Spacechar =     < / |\t/ > { text }
+Nonspacechar =  !Spacechar !Newline <.> { text }
+Newline =       "\n" | "\r" "\n"?
+AlphanumericAscii =  < /[A-Za-z0-9]/ > { text }
+Digit =  < /[0-9]/ > { text }

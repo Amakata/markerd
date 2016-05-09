@@ -1,0 +1,55 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+
+require 'rainbow/ext/string'
+require 'open3'
+require 'optparse'
+require 'fileutils'
+require 'pathname'
+require 'shellwords'
+require 'erb'
+require 'time'
+require 'singleton'
+
+require 'markerd/version.rb'
+
+option = {}
+opt = OptionParser.new do |o|
+  o.version = Markerd::VERSION
+  o.summary_indent = ' ' * 4
+  o.banner = 'Usage: markerd [cmd] [input file].erd [output file]'
+  o.on_head('[cmd]',
+            '    init    サンプルerdファイルの生成',
+            '    build   ビルド')
+  o.on('-v', '出力を詳細にする') { |v| option[:v] = v }
+  o.permute!(ARGV)
+end
+
+cur_dir = Dir.getwd
+
+if ARGV[0] == 'build' && ARGV.length > 1
+  unless File.file?(ARGV[1])
+    puts "File does not exist. #{ARGV[1]}".color :red
+    exit
+  end
+end
+
+$LOAD_PATH.unshift "#{cur_dir}/lib"
+$LOAD_PATH.unshift File.dirname(__FILE__) + '/../lib'
+
+require 'markerd/dsl_accessor'
+
+if ARGV.length != 1
+  puts opt.help
+  exit
+elsif ARGV[0] == 'build' && ARGV.length == 3
+  puts 'build...'.color :green
+#  Xpub::BookManager.instance.build option
+elsif ARGV[0] == 'init'
+  puts 'init...'.color :green
+  FileUtils.cp_r(Dir.glob(File.dirname(__FILE__) + '/../skel/*'), './')
+else
+  puts opt.help
+  exit
+end

@@ -1,0 +1,70 @@
+%% name = Xpub::Markdown
+
+%% header {
+# coding: UTF-8
+# :markup: markdown
+}
+
+%% {
+def paragraph a
+  p a
+end
+}
+
+root = Doc
+
+Doc =       BOM? Block*:a { }
+
+Block =     @BlankLine*
+            ( Plain )
+
+Plain =     Inlines:a
+            { paragraph a }
+
+Inlines  =  ( !@Endline Inline:i { i }
+            | @Endline:c &Inline { c } )+:chunks @Endline?
+            { chunks }
+
+Inline  = Str
+        | @Endline
+
+Endline =   @LineBreak | @TerminalEndline | @NormalEndline
+
+NormalEndline =   @Sp @Newline !@BlankLine !">" !AtxStart
+                  !(Line /={3,}|-{3,}=/ @Newline)
+                  { "\n" }
+
+TerminalEndline = @Sp @Newline @Eof
+
+LineBreak = "  " @NormalEndline { # RDoc::Markup::HardBreak.new
+}
+
+Str = @StartList:a
+      < @NormalChar+ > { a = text }
+      ( StrChunk:c { a << c } )* { a }
+
+StrChunk = < (@NormalChar | /_+/ &Alphanumeric)+ > { text }
+
+StarLine = < /\*{4,}/ > { text } |
+           < @Spacechar /\*+/ &@Spacechar > { text }
+
+StartList = &.
+            { [] }
+BlankLine =     @Sp @Newline { "\n" }
+
+ExtendedSpecialChar = &{ "notes?" } ( "^" )
+
+Eof =           !.
+Nonspacechar =  !@Spacechar !@Newline .
+Sp =            @Spacechar*
+Spnl =          @Sp (@Newline @Sp)?
+SpecialChar =   /[*_`&\[\]()<!#\\'"]/ | @ExtendedSpecialChar
+NormalChar =    !( @SpecialChar | @Spacechar | @Newline ) .
+Digit = [0-9]
+
+Alphanumeric      = /le/
+AlphanumericAscii = /[A-Za-z0-9]/
+BOM               = "\uFEFF"
+Newline           = /\n|\r\n?|\p{Zl}|\p{Zp}/
+NonAlphanumeric   = /\p{^Word}/
+Spacechar         = /\t|\p{Zs}/

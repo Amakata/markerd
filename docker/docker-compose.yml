@@ -1,0 +1,4 @@
+markerd:
+  build: .
+  volumes:
+    - .:/root/
